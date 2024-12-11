@@ -1,0 +1,439 @@
+openapi: 3.0.0
+info:
+  title: Badminton Court Management API
+  version: "1.0.0"
+  description: API pour la gestion des terrains de badminton, utilisateurs, réservations et authentification.
+tags:
+  - name: Admin
+    description: Gestion de l'admin
+  - name: Authentification
+    description: Gestion de l'inscription et de la connexion des utilisateurs
+  - name: Courts
+    description: Gestion des terrains de badminton
+  - name: Reservations
+    description: Gestion des réservations de terrains
+  - name: Users
+    description: Gestion des utilisateurs
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - username
+      properties:
+        id:
+          type: integer
+          description: Identifiant unique de l'utilisateur
+        username:
+          type: string
+          description: Nom d'utilisateur
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création de l'utilisateur
+        updatedAt:
+          type: string
+          format: date-time
+          description: Dernière mise à jour de l'utilisateur
+      example:
+        id: 1
+        username: "JeanDupont"
+        createdAt: "2024-12-01T12:00:00Z"
+        updatedAt: "2024-12-01T12:00:00Z"
+    Court:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        id:
+          type: integer
+          description: Identifiant unique du terrain
+        name:
+          type: string
+          description: Nom du terrain
+        status:
+          type: string
+          description: Statut du terrain (e.g., "available", "unavailable")
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création du terrain
+        updatedAt:
+          type: string
+          format: date-time
+          description: Dernière mise à jour du terrain
+      example:
+        id: 1
+        name: "A"
+        status: "available"
+        createdAt: "2024-12-01T12:00:00Z"
+        updatedAt: "2024-12-01T12:00:00Z"
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identifiant unique de la réservation
+        userId:
+          type: integer
+          description: Identifiant de l'utilisateur ayant effectué la réservation
+        courtId:
+          type: integer
+          description: Identifiant du terrain réservé
+        date:
+          type: string
+          format: date
+          description: Date de la réservation
+        timeSlot:
+          type: integer
+          description: Créneau horaire de la réservation (entre 1 et 16 inclus)
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création de la réservation
+        updatedAt:
+          type: string
+          format: date-time
+          description: Date de dernière mise à jour de la réservation
+      example:
+        id: 1
+        userId: 2
+        courtId: 1
+        date: "2024-12-10"
+        timeSlot: 10
+        createdAt: "2024-12-01T12:00:00Z"
+        updatedAt: "2024-12-01T12:00:00Z"
+paths:
+  /admin/login:
+    post:
+      summary: Se connecter en tant qu'admin
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pseudo
+                - password
+              properties:
+                pseudo:
+                  type: string
+                  description: Pseudo de l'admin
+                password:
+                  type: string
+                  description: Mot de passe de l'admin
+              example:
+                pseudo: "admin"
+                password: "admin"
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token JWT pour authentifier les requêtes
+              example:
+                message: "Login successful."
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Pseudo ou mot de passe non valide.
+        '500':
+          description: Erreur interne du serveur
+  /admin/courts/{id}:
+    put:
+      summary: Modifier le statut d'un terrain
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID du terrain à modifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  description: Nouveau statut du terrain
+              example:
+                status: "unavailable"
+      responses:
+        '200':
+          description: Statut du terrain modifié avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Message de succès
+              example:
+                message: "Court status updated successfully"
+        '401':
+          description: Non autorisé (token manquant ou invalide)
+        '404':
+          description: Terrain non trouvé
+        '500':
+          description: Erreur interne du serveur
+  /register:
+    post:
+      summary: Inscrire un nouvel utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  description: Nom d'utilisateur
+              example:
+                username: "JeanDupont"
+      responses:
+        '201':
+          description: Utilisateur inscrit avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Message de succès
+                  token:
+                    type: string
+                    description: Token JWT pour authentifier les requêtes
+              example:
+                message: "User registered successfully."
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ..."
+        '400':
+          description: Erreur de validation ou utilisateur déjà existant
+        '500':
+          description: Erreur interne du serveur
+  /login:
+    post:
+      summary: Connecter un utilisateur existant
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  description: Nom d'utilisateur
+              example:
+                username: "JeanDupont"
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token JWT pour authentifier les requêtes
+              example:
+                message: "Login successful."
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Erreur de validation ou utilisateur introuvable
+        '500':
+          description: Erreur interne du serveur
+  /courts:
+    get:
+      summary: Récupérer tous les terrains
+      tags:
+        - Courts
+      responses:
+        '200':
+          description: Liste des terrains.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Court'
+    post:
+      summary: Ajouter un nouveau terrain
+      tags:
+        - Courts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - status
+              properties:
+                name:
+                  type: string
+                  description: Nom du terrain
+                status:
+                  type: string
+                  description: Statut du terrain (e.g., "available", "unavailable")
+              example:
+                name: "B"
+                status: "available"
+      responses:
+        '201':
+          description: Terrain créé avec succès.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Court'
+        '400':
+          description: Erreur de validation.
+  /courts/{id}:
+    get:
+      summary: Récupérer un terrain spécifique par son ID
+      tags:
+        - Courts
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: ID du terrain
+      responses:
+        '200':
+          description: Terrain trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Court'
+        '404':
+          description: Terrain non trouvé
+  /reservations:
+    post:
+      summary: Créer une nouvelle réservation
+      tags:
+        - Reservations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - courtName
+                - date
+                - timeSlot
+              properties:
+                courtName:
+                  type: string
+                  description: Nom du terrain à réserver
+                date:
+                  type: string
+                  format: date
+                  description: Date de la réservation (dans la semaine en cours, sauf dimanche)
+                timeSlot:
+                  type: integer
+                  description: Créneau horaire de la réservation (1 à 16 inclus)
+              example:
+                courtName: "Court A"
+                date: "2024-12-10"
+                timeSlot: 10
+      responses:
+        '201':
+          description: Réservation créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Erreur de validation (date hors semaine en cours, dimanche ou créneau non valide)
+        '404':
+          description: Terrain non trouvé ou non disponible
+        '500':
+          description: Erreur interne du serveur
+    get:
+      summary: Récupérer les réservations de l'utilisateur connecté
+      tags:
+        - Reservations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des réservations de l'utilisateur
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+        '401':
+          description: Non autorisé (token manquant ou invalide)
+        '500':
+          description: Erreur interne du serveur
+  /reservations/{reservationId}:
+    delete:
+      summary: Supprimer une réservation
+      tags:
+        - Reservations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reservationId
+          schema:
+            type: integer
+          required: true
+          description: ID de la réservation à supprimer
+      responses:
+        '200':
+          description: Réservation supprimée avec succès
+        '403':
+          description: Non autorisé à supprimer cette réservation
+        '404':
+          description: Réservation non trouvée
+        '500':
+          description: Erreur interne du serveur
+  /users:
+    get:
+      summary: Récupérer tous les utilisateurs
+      tags:
+        - Users
+      responses:
+        '200':
+          description: Liste de tous les utilisateurs
+          content:
+            application/json:
+              schema:
+                type: array
